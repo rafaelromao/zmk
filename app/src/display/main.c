@@ -4,24 +4,24 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <kernel.h>
-#include <init.h>
-#include <device.h>
-#include <devicetree.h>
+#include <zephyr/kernel.h>
+#include <zephyr/init.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
-#include <drivers/display.h>
+#include <zephyr/drivers/display.h>
 #include <lvgl.h>
+
+#include "theme.h"
 
 #include <zmk/event_manager.h>
 #include <zmk/events/activity_state_changed.h>
 #include <zmk/display/status_screen.h>
 
-#define ZMK_DISPLAY_NAME CONFIG_LVGL_DISPLAY_DEV_NAME
-
-static const struct device *display;
+static const struct device *display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 static bool initialized = false;
 
 static lv_obj_t *screen;
@@ -66,11 +66,34 @@ void display_timer_cb() {
     k_work_submit_to_queue(zmk_display_work_q(), &display_tick_work);
 }
 
-void blank_display_cb(struct k_work *work) { display_blanking_on(display); }
+void full_refresh_timer_cb() { k_work_submit_to_queue(zmk_display_work_q(), &full_refresh_work); }
 
-void unblank_display_cb(struct k_work *work) { display_blanking_off(display); }
+K_TIMER_DEFINE(full_refresh_timer, full_refresh_timer_cb, NULL);
+
+#endif
+
+void display_timer_cb() { k_work_submit_to_queue(zmk_display_work_q(), &display_tick_work); }
 
 K_TIMER_DEFINE(display_timer, display_timer_cb, NULL);
+
+void unblank_display_cb(struct k_work *work) {
+    display_blanking_off(display);
+    k_timer_start(&display_timer, K_MSEC(TICK_MS), K_MSEC(TICK_MS));
+#if CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD > 0
+    k_timer_start(&full_refresh_timer, K_SECONDS(CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD),
+                  K_SECONDS(CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD));
+#endif
+}
+
+#if IS_ENABLED(CONFIG_ZMK_DISPLAY_BLANK_ON_IDLE)
+
+void blank_display_cb(struct k_work *work) {
+    k_timer_stop(&display_timer);
+    display_blanking_on(display);
+#if CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD > 0
+    k_timer_stop(&full_refresh_timer);
+#endif
+}
 K_WORK_DEFINE(blank_display_work, blank_display_cb);
 K_WORK_DEFINE(unblank_display_work, unblank_display_cb);
 
@@ -87,8 +110,6 @@ static void start_display_updates() {
                   K_SECONDS(CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD));
 #endif
 }
-
-#if IS_ENABLED(CONFIG_ZMK_DISPLAY_BLANK_ON_IDLE)
 
 static void stop_display_updates() {
     if (display == NULL) {
@@ -107,16 +128,28 @@ static void stop_display_updates() {
 
 int zmk_display_is_initialized() { return initialized; }
 
+static void initialize_theme() {
+#if IS_ENABLED(CONFIG_LV_USE_THEME_MONO)
+    lv_disp_t *disp = lv_disp_get_default();
+    lv_theme_t *theme =
+        lv_theme_mono_init(disp, IS_ENABLED(CONFIG_ZMK_DISPLAY_INVERT), CONFIG_LV_FONT_DEFAULT);
+    theme->font_small = CONFIG_ZMK_LV_FONT_DEFAULT_SMALL;
+
+    disp->theme = theme;
+#endif // CONFIG_LV_USE_THEME_MONO
+}
+
 void initialize_display(struct k_work *work) {
     LOG_DBG("");
 
-    display = device_get_binding(ZMK_DISPLAY_NAME);
-    if (display == NULL) {
+    if (!device_is_ready(display)) {
         LOG_ERR("Failed to find display device");
         return;
     }
 
     initialized = true;
+
+    initialize_theme();
 
     screen = zmk_display_status_screen();
 
@@ -127,7 +160,7 @@ void initialize_display(struct k_work *work) {
 
     lv_scr_load(screen);
 
-    start_display_updates();
+    unblank_display_cb(work);
 }
 
 K_WORK_DEFINE(init_work, initialize_display);

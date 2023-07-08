@@ -11,7 +11,7 @@
 #include "widgets/layer_status.h"
 #include "custom_status_screen.h"
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 LV_IMG_DECLARE(layers2);
@@ -35,7 +35,7 @@ static struct zmk_widget_layer_status layer_status_widget;
 lv_obj_t *zmk_display_status_screen() {
 
     lv_obj_t *screen;
-    screen = lv_obj_create(NULL, NULL);
+    screen = lv_obj_create(NULL);
 
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_BATTERY_STATUS)
     zmk_widget_battery_status_init(&battery_status_widget, screen);
@@ -81,9 +81,19 @@ lv_obj_t *zmk_display_status_screen() {
                  -5);
 
     lv_obj_t *LayersHeading;
-    LayersHeading = lv_img_create(screen, NULL);
-    lv_obj_align(LayersHeading, NULL, LV_ALIGN_IN_BOTTOM_MID, 8, 5);
+    LayersHeading = lv_img_create(screen);
+    lv_obj_align(LayersHeading, LV_ALIGN_BOTTOM_MID, 0, -30);
     lv_img_set_src(LayersHeading, &layers2);
+#endif
+#endif
+
+    zmk_widget_layer_status_init(&layer_status_widget, screen);
+    lv_obj_set_style_text_font(zmk_widget_layer_status_obj(&layer_status_widget),
+                               &lv_font_montserrat_16, LV_PART_MAIN);
+#if IS_ENABLED(CONFIG_CUSTOM_WIDGET_LAYER_STATUS_HIDE_HEADING)
+    lv_obj_align(zmk_widget_layer_status_obj(&layer_status_widget), LV_ALIGN_CENTER, 0, 43);
+#else
+    lv_obj_align(zmk_widget_layer_status_obj(&layer_status_widget), LV_ALIGN_BOTTOM_MID, 0, -5);
 #endif
 #endif
 
