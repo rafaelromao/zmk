@@ -61,17 +61,6 @@ K_TIMER_DEFINE(full_refresh_timer, full_refresh_timer_cb, NULL);
 
 #endif
 
-void display_timer_cb() {
-    lv_tick_inc(TICK_MS);
-    k_work_submit_to_queue(zmk_display_work_q(), &display_tick_work);
-}
-
-void full_refresh_timer_cb() { k_work_submit_to_queue(zmk_display_work_q(), &full_refresh_work); }
-
-K_TIMER_DEFINE(full_refresh_timer, full_refresh_timer_cb, NULL);
-
-#endif
-
 void display_timer_cb() { k_work_submit_to_queue(zmk_display_work_q(), &display_tick_work); }
 
 K_TIMER_DEFINE(display_timer, display_timer_cb, NULL);
@@ -103,12 +92,6 @@ static void start_display_updates() {
     }
 
     k_work_submit_to_queue(zmk_display_work_q(), &unblank_display_work);
-
-    k_timer_start(&display_timer, K_MSEC(TICK_MS), K_MSEC(TICK_MS));
-#if CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD > 0
-    k_timer_start(&full_refresh_timer, K_SECONDS(CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD),
-                  K_SECONDS(CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD));
-#endif
 }
 
 static void stop_display_updates() {
@@ -117,11 +100,6 @@ static void stop_display_updates() {
     }
 
     k_work_submit_to_queue(zmk_display_work_q(), &blank_display_work);
-
-    k_timer_stop(&display_timer);
-#if CONFIG_ZMK_DISPLAY_FULL_REFRESH_PERIOD > 0
-    k_timer_stop(&full_refresh_timer);
-#endif
 }
 
 #endif
