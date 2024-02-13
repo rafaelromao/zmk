@@ -201,27 +201,27 @@ static int behavior_antecedent_morph_init(const struct device *dev) {
 #define TRANSFORMED_BINDINGS(node)					                                              \
   { LISTIFY(DT_INST_PROP_LEN(node, bindings), _TRANSFORM_ENTRY_BINDING, (, ), DT_DRV_INST(node)) }
 
-#define KP_INST(n)							                                              \
-  static struct zmk_behavior_binding behavior_antecedent_morph_config_##n##_defaults[DT_INST_PROP_LEN(n, defaults)] = \
-    TRANSFORMED_DEFAULTS(n);						                                              \
-  static struct zmk_behavior_binding behavior_antecedent_morph_config_##n##_bindings[DT_INST_PROP_LEN(n, bindings)] = \
-    TRANSFORMED_BINDINGS(n);						                                              \
-  static struct behavior_antecedent_morph_config behavior_antecedent_morph_config_##n = {                             \
-    .serial = n,							                                              \
-    .max_delay_ms = DT_INST_PROP(n, max_delay_ms),			                                              \
-    .defaults = behavior_antecedent_morph_config_##n##_defaults,	                                              \
-    .defaults_len = DT_INST_PROP_LEN(n, defaults),			                                              \
-    .bindings = behavior_antecedent_morph_config_##n##_bindings,                                                      \
-    .bindings_len = DT_INST_PROP_LEN(n, bindings),			                                              \
-    .antecedents = DT_INST_PROP(n, antecedents),			                                              \
-    .antecedents_len = DT_INST_PROP_LEN(n, antecedents)                                                               \
-  };									                                              \
-  static struct behavior_antecedent_morph_data behavior_antecedent_morph_data_##n = {                                 \
-  };									                                              \
-  DEVICE_DT_INST_DEFINE(n,behavior_antecedent_morph_init,NULL,&behavior_antecedent_morph_data_##n,   		      \
-			&behavior_antecedent_morph_config_##n,		                                              \
-			APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,                                             \
-			&behavior_antecedent_morph_driver_api);
+#define KP_INST(n)                                                                                 \
+  static struct zmk_behavior_binding                                                               \
+      behavior_antecedent_morph_config_##n##_defaults[DT_INST_PROP_LEN(n, defaults)] =             \
+          TRANSFORMED_DEFAULTS(n);                                                                 \
+  static struct zmk_behavior_binding                                                               \
+      behavior_antecedent_morph_config_##n##_bindings[DT_INST_PROP_LEN(n, bindings)] =             \
+          TRANSFORMED_BINDINGS(n);                                                                 \
+  static struct behavior_antecedent_morph_config behavior_antecedent_morph_config_##n = {          \
+      .serial = n,                                                                                 \
+      .max_delay_ms = DT_INST_PROP(n, max_delay_ms),                                               \
+      .defaults = behavior_antecedent_morph_config_##n##_defaults,                                 \
+      .defaults_len = DT_INST_PROP_LEN(n, defaults),                                               \
+      .bindings = behavior_antecedent_morph_config_##n##_bindings,                                 \
+      .bindings_len = DT_INST_PROP_LEN(n, bindings),                                               \
+      .antecedents = DT_INST_PROP(n, antecedents),                                                 \
+      .antecedents_len = DT_INST_PROP_LEN(n, antecedents)};                                        \
+  static struct behavior_antecedent_morph_data behavior_antecedent_morph_data_##n = {};            \
+  BEHAVIOR_DT_INST_DEFINE(                                                                         \
+      n, behavior_antecedent_morph_init, NULL, &behavior_antecedent_morph_data_##n,                \
+      &behavior_antecedent_morph_config_##n, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,     \
+      &behavior_antecedent_morph_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(KP_INST)
 
