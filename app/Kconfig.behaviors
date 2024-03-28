@@ -18,9 +18,13 @@ config ZMK_BEHAVIOR_INPUT_TWO_AXIS
     depends on DT_HAS_ZMK_BEHAVIOR_INPUT_TWO_AXIS_ENABLED
     imply ZMK_MOUSE
 
+config ZMK_BEHAVIOR_SOFT_OFF
+    bool
+    default y
+    depends on DT_HAS_ZMK_BEHAVIOR_SOFT_OFF_ENABLED && ZMK_PM_SOFT_OFF
+
 config ZMK_BEHAVIOR_SENSOR_ROTATE_COMMON
     bool
-    default n
 
 config ZMK_BEHAVIOR_SENSOR_ROTATE
     bool
