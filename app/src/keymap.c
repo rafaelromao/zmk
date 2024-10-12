@@ -613,7 +613,49 @@ int zmk_keymap_apply_position_state(uint8_t source, zmk_keymap_layer_id_t layer_
     LOG_DBG("layer_id: %d position: %d, binding name: %s", layer_id, position,
             binding->behavior_dev);
 
-    return zmk_behavior_invoke_binding(binding, event, pressed);
+    behavior = zmk_behavior_get_binding(binding.behavior_dev);
+
+    if (!behavior) {
+        LOG_WRN("No behavior assigned to %d on layer %d", position, layer);
+        return 1;
+    }
+
+    int err = behavior_keymap_binding_convert_central_state_dependent_params(&binding, event);
+    if (err) {
+        LOG_ERR("Failed to convert relative to absolute behavior binding (err %d)", err);
+        return err;
+    }
+
+    enum behavior_locality locality = BEHAVIOR_LOCALITY_CENTRAL;
+    err = behavior_get_locality(behavior, &locality);
+    if (err) {
+        LOG_ERR("Failed to get behavior locality %d", err);
+        return err;
+    }
+
+    switch (locality) {
+    case BEHAVIOR_LOCALITY_CENTRAL:
+        return invoke_locally(&binding, event, pressed);
+    case BEHAVIOR_LOCALITY_EVENT_SOURCE:
+#if ZMK_BLE_IS_CENTRAL
+        if (source == ZMK_POSITION_STATE_CHANGE_SOURCE_LOCAL) {
+            return invoke_locally(&binding, event, pressed);
+        } else {
+            return zmk_split_invoke_behavior(source, &binding, event, pressed);
+        }
+#else
+        return invoke_locally(&binding, event, pressed);
+#endif
+    case BEHAVIOR_LOCALITY_GLOBAL:
+#if ZMK_BLE_IS_CENTRAL
+        for (int i = 0; i < ZMK_SPLIT_BLE_PERIPHERAL_COUNT; i++) {
+            zmk_split_invoke_behavior(i, &binding, event, pressed);
+        }
+#endif
+        return invoke_locally(&binding, event, pressed);
+    }
+
+    return -ENOTSUP;
 }
 
 int zmk_keymap_position_state_changed(uint8_t source, uint32_t position, bool pressed,
