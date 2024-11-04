@@ -25,3 +25,4 @@
 #include <behaviors/macros.dtsi>
 #include <behaviors/leader_key.dtsi>
 #include <behaviors/soft_off.dtsi>
+#include <behaviors/studio_unlock.dtsi>
